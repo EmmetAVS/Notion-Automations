@@ -58,7 +58,7 @@ database_format = {
     }
 }
 
-def get_assignments(course, api_key):
+def get_assignments(course, user_id, api_key):
     
     response = r.get(f"{course['url']}/assignments", headers={
         "Authorization": f"Bearer {api_key}",
@@ -71,17 +71,28 @@ def get_assignments(course, api_key):
     for assignment in response.json():
         if not assignment.get('due_at'):
             continue
+
+        submissions_response = r.get(f"{course['url']}/assignments/{assignment['id']}/submissions/{user_id}", headers={
+                "Authorization": f"Bearer {api_key}",
+            })
+
+        submissions_response.raise_for_status()
+        submissions = submissions_response.json()
         
+
         assignments.append({
             "id": str(assignment['id']),
             "name": assignment['name'],
             "due_at": assignment['due_at'],
             "description": assignment['description'],
-            "submitted": assignment.get('has_submitted_submissions', False),
-            "graded": assignment.get('graded_submissions_exist', False),
+            "submitted": False,
+            "graded": False,
             "course": course['name'],
             "url": assignment.get('html_url', "")
         })
+
+        assignments[-1]['submitted'] = submissions.get('workflow_state') in ['submitted', 'graded']
+        assignments[-1]['graded'] = submissions.get('workflow_state') == 'graded'
 
     return assignments
 
@@ -277,6 +288,7 @@ def update_notion(assignments, data):
         
         response.raise_for_status()
 
+    new_assignments.extend(other_assignments)
     assignment_map = {
         assignment['id']: assignment for assignment in new_assignments
     }
@@ -319,7 +331,7 @@ def update_notion(assignments, data):
                     }
                 },
                 "Link": {
-                    "url": assignment['url']
+                    "url": assignment_details['url']
                 }
             }
         })
@@ -334,6 +346,14 @@ def scrape_assignments(data):
         })
         
         response.raise_for_status()
+        
+        user_response = r.get("https://mvla.instructure.com/api/v1/users/self", headers={
+            "Authorization": f"Bearer {canvas['canvas-api-token']}",
+        })
+        
+        user_response.raise_for_status()
+        
+        user_id = user_response.json()['id']
         
         courses = []
         
@@ -353,7 +373,7 @@ def scrape_assignments(data):
         
         
         for course in courses:
-            all_assignments.extend(get_assignments(course, canvas['canvas-api-token']))
+            all_assignments.extend(get_assignments(course, user_id, canvas['canvas-api-token']))
             
     return all_assignments
 
