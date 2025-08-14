@@ -1,0 +1,15 @@
+{
+  "Canvas": {
+    "canvases": [
+      {
+        "canvas-api-url": "https://mvla.instructure.com",
+        "canvas-api-token": "...",
+        "excluded-course-codes": []
+      }
+    ]
+  },
+  "Notion": {
+    "Notion-API-Key": "...",
+    "parent-page-id": "..."
+  }
+}
