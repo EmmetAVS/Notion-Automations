@@ -271,6 +271,9 @@ def update_notion(assignments, data):
             }
         })
         
+        if "Assignee" in properties:
+            del properties["Assignee"]
+        
         response = r.post(
             "https://api.notion.com/v1/pages",
             headers = {
@@ -286,6 +289,9 @@ def update_notion(assignments, data):
             }
         )
         
+        if response.status_code != 200:
+            print(response.text)
+            print(json.dumps(properties, indent=4))
         response.raise_for_status()
 
     new_assignments.extend(other_assignments)
