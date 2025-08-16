@@ -413,11 +413,10 @@ def main(stop_event, config):
         print(f"Error in Canvas integration: {e}")
         stop_event.set()
         
-    while not stop_event.is_set():
+    if not stop_event.is_set():
         
         with config.lock:
             data = copy.deepcopy(config.get_data())
         
         assignments = scrape_assignments(data)
         update_notion(assignments, data)
-        break

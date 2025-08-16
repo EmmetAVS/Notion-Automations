@@ -12,6 +12,10 @@ nullable_keys = []
 
 stop_event = threading.Event()
 
+ignored_automatons = [
+    "Canvas"
+]
+
 class Config:
     def __init__(self, filename="config.json"):
         
@@ -56,7 +60,7 @@ def main():
     
     for integration in os.listdir():
         dirpath = os.path.join(".", integration)
-        if not os.path.isdir(dirpath) or not os.path.exists(os.path.join(dirpath, "main.py")):
+        if not os.path.isdir(dirpath) or not os.path.exists(os.path.join(dirpath, "main.py")) or integration in ignored_automatons:
             continue
         
         filename = os.path.join(dirpath, "main.py")[2:]
