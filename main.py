@@ -13,7 +13,8 @@ nullable_keys = []
 stop_event = threading.Event()
 
 ignored_automatons = [
-    "Canvas"
+    #"Canvas",
+    #"Google_Classroom"
 ]
 
 class Config:

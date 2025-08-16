@@ -5,6 +5,7 @@ import copy
 import json
 from datetime import datetime as dt, timezone
 from bs4 import BeautifulSoup as bs
+from Utils.notion import confirm_notion_database, list_db_items
 
 integration_title = "Canvas"
 
@@ -96,27 +97,7 @@ def get_assignments(course, user_id, api_key):
 
     return assignments
 
-def confirm_notion_database(data, assignments):
-    headers = {
-        "Authorization": f"Bearer {data.get('Notion').get('Notion-API-Key')}",
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28'
-    }
-    
-    parent = {
-        "type": "page_id",
-        "page_id": data['Notion']["parent-page-id"]
-    }
-    
-    search_request = r.post("https://api.notion.com/v1/search", headers=headers, json={
-        "query": expected_title,
-        "filter": {
-            "value": "database",
-            "property": "object"
-        },
-    })
-    
-    id = None
+def confirm_notion_database_wrapper(data, assignments):
     
     now = dt.now(timezone.utc)
     
@@ -134,71 +115,23 @@ def confirm_notion_database(data, assignments):
     ]
     
 
-    search_request.raise_for_status()
-    
-    for db in search_request.json().get("results", []):
-        name = db.get("title", [{}])[0].get("text", {}).get("content", {})
-        if name == expected_title:
-            id = db.get("id")
-            
-            course_names = [course['name'] for course in courses]
-            for course in db.get("properties", {}).get("Course", {}).get("select", {}).get("options", []):
-                if course['name'] not in course_names:
-                    course_names.append(course['name'])
-                    courses.append({"name": course['name']})
-
-            break
-
-    database_format["properties"]["Course"]["select"]["options"] = courses
-
-    if not id:
-        
-        database_format["parent"] = parent
-        database_format['title'] = [
-            {
-                "type": "text",
-                "text": {
-                    "content": expected_title
-                }
-            }
+    special_properties = {
+        "Course": courses,
+        "Status": [
+            {"name": "Not started", "color": "red"},
+            {"name": "In progress", "color": "yellow"},
+            {"name": "Submitted", "color": "blue"},
+            {"name": "Graded", "color": "green"}
         ]
-        
-        created_db_response = r.post(
-            "https://api.notion.com/v1/databases",
-            headers=headers,
-            json=database_format
-        )
-        created_db_response.raise_for_status()
-        id = created_db_response.json().get("id")
-        properties = created_db_response.json()['properties']
-    else:
-        updated_db_response = r.patch(
-            f"https://api.notion.com/v1/databases/{id}",
-            headers=headers,
-            json=database_format
-        )
-        updated_db_response.raise_for_status()
-        properties = updated_db_response.json()['properties']
+    }
+    
+    id, properties = confirm_notion_database(data, expected_title, database_format, special_properties)
 
     return (id, properties, new_assignments, other_assignments)
         
-def list_db_items(id, key):
-    response = r.post(
-        "https://api.notion.com/v1/databases/{}/query".format(id),
-        headers = {
-            "Authorization": f"Bearer {key}",
-            'Content-Type': 'application/json',
-            'Notion-Version': '2022-06-28'
-        }
-    )
-    
-    response.raise_for_status()
-    
-    return response.json().get("results", [])
-        
 def update_notion(assignments, data):
     
-    id, base_properties, new_assignments, other_assignments = confirm_notion_database(data, assignments)
+    id, base_properties, new_assignments, other_assignments = confirm_notion_database_wrapper(data, assignments)
     items = list_db_items(id, data['Notion']['Notion-API-Key'])
 
     existing_items = [
@@ -220,7 +153,7 @@ def update_notion(assignments, data):
             text = assignment.get("description", "")
         text = f"{text[0:1997]}..." if len(text) > 2000 else text
 
-        properties = base_properties.copy()
+        properties = {}
         properties.update({
             "Description": {
                 "rich_text": [
@@ -270,9 +203,6 @@ def update_notion(assignments, data):
                 "url": assignment['url']
             }
         })
-        
-        if "Assignee" in properties:
-            del properties["Assignee"]
         
         response = r.post(
             "https://api.notion.com/v1/pages",
