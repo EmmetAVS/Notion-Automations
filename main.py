@@ -61,6 +61,10 @@ def main():
     
     for integration in os.listdir():
         dirpath = os.path.join(".", integration)
+        
+        if not config.get_data().get(integration):
+            continue
+        
         if not os.path.isdir(dirpath) or not os.path.exists(os.path.join(dirpath, "main.py")) or integration in ignored_automatons:
             continue
         
