@@ -146,11 +146,14 @@ def update_notion(assignments, data):
         
         time = dt.fromisoformat(assignment['due_at'].replace("Z", "+00:00"))
 
-        soup = bs(assignment.get("description", ""), "html.parser")
         try:
+            soup = bs(assignment.get("description", ""), "html.parser")
             text = soup.get_text(separator="\n").strip()
         except TypeError:
             text = assignment.get("description", "")
+
+        if not text:
+            text = ""
         text = f"{text[0:1997]}..." if len(text) > 2000 else text
 
         properties = {}
