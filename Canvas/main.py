@@ -280,7 +280,7 @@ def scrape_assignments(data):
     all_assignments = []
 
     for canvas in data[integration_title]["canvases"]:
-        response = r.get("https://canvas.instructure.com/api/v1/courses", headers={
+        response = r.get("https://canvas.instructure.com/api/v1/courses?per_page=100", headers={
             "Authorization": f"Bearer {canvas['canvas-api-token']}",
         })
         
