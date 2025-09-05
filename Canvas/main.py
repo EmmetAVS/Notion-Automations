@@ -61,7 +61,7 @@ database_format = {
 
 def get_assignments(course, user_id, api_key):
     
-    response = r.get(f"{course['url']}/assignments", headers={
+    response = r.get(f"{course['url']}/assignments?per_page=100", headers={
         "Authorization": f"Bearer {api_key}",
     })
     
