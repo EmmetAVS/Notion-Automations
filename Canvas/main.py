@@ -280,7 +280,7 @@ def scrape_assignments(data):
     all_assignments = []
 
     for canvas in data[integration_title]["canvases"]:
-        response = r.get("https://canvas.instructure.com/api/v1/courses?per_page=100", headers={
+        response = r.get("https://canvas.instructure.com/api/v1/courses?per_page=100&enrollment_state=active", headers={
             "Authorization": f"Bearer {canvas['canvas-api-token']}",
         })
         
@@ -312,6 +312,7 @@ def scrape_assignments(data):
         
         
         for course in courses:
+            print(f"Scraping Canvas assignments for course {course['name']}")
             all_assignments.extend(get_assignments(course, user_id, canvas['canvas-api-token']))
             
     return all_assignments
