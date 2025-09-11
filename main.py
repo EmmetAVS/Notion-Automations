@@ -14,7 +14,7 @@ stop_event = threading.Event()
 
 ignored_automatons = [
     #"Canvas",
-    "Google_Classroom"
+    #"Google_Classroom"
 ]
 
 class Config:
