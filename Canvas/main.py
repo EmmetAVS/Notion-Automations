@@ -1,19 +1,14 @@
-from email import header
-from wsgiref import headers
 import requests as r
 import copy
 import json
 from datetime import datetime as dt, timezone
 from bs4 import BeautifulSoup as bs
 from Utils.notion import confirm_notion_database, list_db_items
+import traceback
 
 integration_title = "Canvas"
 
-config_defaults = {
-    "canvases": [
-        
-    ]
-}
+config_defaults = []
 
 canvas_defaults = {
     "canvas-api-url": None,
@@ -279,14 +274,15 @@ def scrape_assignments(data):
     
     all_assignments = []
 
-    for canvas in data[integration_title]["canvases"]:
-        response = r.get("https://canvas.instructure.com/api/v1/courses?per_page=100&enrollment_state=active", headers={
+    for canvas in data[integration_title]:
+        
+        response = r.get(f"{canvas['canvas-api-url']}/api/v1/courses?per_page=100&enrollment_state=active", headers={
             "Authorization": f"Bearer {canvas['canvas-api-token']}",
         })
         
         response.raise_for_status()
         
-        user_response = r.get("https://mvla.instructure.com/api/v1/users/self", headers={
+        user_response = r.get(f"{canvas['canvas-api-url']}/api/v1/users/self", headers={
             "Authorization": f"Bearer {canvas['canvas-api-token']}",
         })
         
@@ -323,14 +319,9 @@ def check_config(config):
         if integration_title not in data:
             data[integration_title] = config_defaults
             config.write_data()
-        else:
-            for key in config_defaults.keys():
-                if key not in data[integration_title]:
-                    data[integration_title][key] = config_defaults[key]
-                    config.write_data()
 
         forced_update = False
-        for canvas in data[integration_title]["canvases"]:
+        for canvas in data[integration_title]:
             for key in canvas_defaults.keys():
                 if key not in canvas or canvas[key] is None:
                     forced_update = True
@@ -345,6 +336,7 @@ def main(stop_event, config):
         check_config(config)
     except Exception as e:
         print(f"Error in Canvas integration: {e}")
+        traceback.print_exc()
         stop_event.set()
         
     if not stop_event.is_set():
